@@ -1,0 +1,9 @@
+
+/* No custom CSS needed as Tailwind is used, but adding utility for hiding scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
