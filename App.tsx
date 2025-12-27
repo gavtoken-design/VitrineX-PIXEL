@@ -78,7 +78,7 @@ const App: React.FC = () => {
   const [isComparing, setIsComparing] = useState<boolean>(false);
 
   useEffect(() => {
-    if (currentImage) {
+    if (currentImage instanceof Blob) {
       const url = URL.createObjectURL(currentImage);
       setCurrentImageUrl(url);
       return () => URL.revokeObjectURL(url);
@@ -88,7 +88,7 @@ const App: React.FC = () => {
   }, [currentImage]);
   
   useEffect(() => {
-    if (originalImage) {
+    if (originalImage instanceof Blob) {
       const url = URL.createObjectURL(originalImage);
       setOriginalImageUrl(url);
       return () => URL.revokeObjectURL(url);
@@ -107,15 +107,19 @@ const App: React.FC = () => {
   };
 
   const addImageToHistory = useCallback((newImageFile: File) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(newImageFile);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
+    setHistory(prevHistory => {
+        const newHistory = prevHistory.slice(0, historyIndex + 1);
+        newHistory.push(newImageFile);
+        return newHistory;
+    });
+    setHistoryIndex(prevIndex => prevIndex + 1);
     setCrop(undefined);
     setCompletedCrop(undefined);
-  }, [history, historyIndex]);
+  }, [historyIndex]);
 
-  const handleImageUpload = useCallback((file: File) => {
+  const handleImageUpload = useCallback((files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
     setError(null);
     setHistory([file]);
     setHistoryIndex(0);
@@ -150,13 +154,23 @@ const App: React.FC = () => {
         await checkApiKey();
         const generatedImageUrl = await generateNewImage(prompt, aspectRatio);
         const newImageFile = dataURLtoFile(generatedImageUrl, `gen-${Date.now()}.png`);
-        handleImageUpload(newImageFile);
+        // Use a wrapper to simulate a FileList for handleImageUpload or handle it directly
+        setError(null);
+        setHistory([newImageFile]);
+        setHistoryIndex(0);
+        setEditHotspot(null);
+        setDisplayHotspot(null);
+        setActiveTab('magic');
+        setCrop(undefined);
+        setCompletedCrop(undefined);
+        setAnalysisResult(null);
+        setGeneratedVideoUrl(null);
     } catch (err) {
         setError(err instanceof Error ? err.message : 'Generation failed.');
     } finally {
         setIsLoading(false);
     }
-  }, [handleImageUpload]);
+  }, []);
 
   const handleAnalyzeAction = useCallback(async (prompt: string) => {
     if (!currentImage) return;
@@ -296,7 +310,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleDownload = useCallback(() => {
-      if (currentImage) {
+      if (currentImage instanceof Blob) {
           const link = document.createElement('a');
           link.href = URL.createObjectURL(currentImage);
           link.download = `edited-pixshop.png`;
